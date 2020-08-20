@@ -1,8 +1,16 @@
 let map;
+var geoKeywordsList;
+
+$(document).ready(function() {
+	$('#recommendations-list').on('click', '.recommendation', function() {
+		searchWikipediaAndReload(this.innerHTML);
+	});
+});
+
 
 function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: -34.397, lng: 150.644 },
+    center: { lat: 37.7159, lng: -121.9101 },
     zoom: 8
   });
 
@@ -26,42 +34,49 @@ function switchToNewLocation(lat, lng) {
 
 	    	var results = response.results;
 	    	var geoKeywordsByLocationType = parseGeocodingResults(results);
-	    	console.log(geoKeywordsByLocationType);
-	    	var geoKeywordsList = getGeoKeywordsList(geoKeywordsByLocationType);
+	    	geoKeywordsList = getGeoKeywordsList(geoKeywordsByLocationType);
 	    	var mainKeyword = pickMainKeywordfromGeocodingResults(geoKeywordsByLocationType);
-	    	console.log(mainKeyword);
 
 	    	if (mainKeyword != null) {
-		    	searchWikipedia(mainKeyword)
-			    .then(function(response) {
-			        var matchedPages = response.query.search;
-			        if (matchedPages.length > 1) {
-			        	var currentUrl = getWikiUrl();
-			        	var newUrl = "https://en.wikipedia.org/wiki/" + matchedPages[0].title.replace(/ /g,"_");
-
-			        	if (currentUrl != newUrl) {
-			        		setWikiUrl(newUrl);
-			        	}
-
-			        	hideLoadingBar();
-
-			        	addRecommendedSearches(geoKeywordsList);
-			        }
-			    });
+		    	searchWikipediaAndReload(mainKeyword);
 	    	}
 	    });
     }
 }
 
+function searchWikipediaAndReload(mainKeyword) {
+	searchWikipedia(mainKeyword)
+	    .then(function(response) {
+	        var matchedPages = response.query.search;
+	        if (matchedPages.length > 1) {
+	        	var currentUrl = getWikiUrl();
+	        	var newUrl = "https://en.wikipedia.org/wiki/" + matchedPages[0].title.replace(/ /g,"_");
+
+	        	if (currentUrl != newUrl) {
+	        		setWikiUrl(newUrl);
+	        	}
+
+	        	hideLoadingBar();
+
+	        	addRecommendedSearches(geoKeywordsList);
+	        }
+	    });
+}
+
+function searchForNewQuery(keyword) {
+	showLoadingBar();
+	setWikiUrl("");
+	console.log(keyword);
+	searchWikipediaAndReload(keyword);
+}
+
 function addRecommendedSearches(geoKeywordsList) {
-	console.log(geoKeywordsList);
 	var recommendationsDiv = document.getElementById("recommendations-list");
 
 	recommendationsDiv.innerHTML = "";
 
 	for (i in geoKeywordsList) {
 		var keyword = geoKeywordsList[i];
-		console.log(keyword);
 		var node = document.createElement("div");
 		node.classList.add("recommendation");
 		node.innerHTML = keyword;
@@ -145,7 +160,6 @@ function searchWikipedia(searchQuery) {
 
 function parseGeocodingResults(results) {
 	var locationsAndTypes = {}
-	console.log("---");
 	for (result of results) {
 		for (addrComponent of result.address_components) {
 			var addrName = addrComponent.long_name;

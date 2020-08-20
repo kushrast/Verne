@@ -17,12 +17,14 @@
 }
 
 #wiki_options {
+	pointer-events: none;
 	height: 100vh;
 	width: 50vw;
 	position: absolute;
 	display: flex;
 	align-items: center;
   	justify-content: center;
+  	z-index: 10;
 }
 
 #recommendations-list {
@@ -32,6 +34,7 @@
 }
 
 .recommendation {
+	pointer-events: auto;
 	background-color: #3D9970;
 	color: white;
 	font-family: Roboto;
