@@ -16,6 +16,11 @@ function initMap() {
     
     if (data != null) {
 	    data.then(response => {
+	    	var loadingBar = document.getElementById("loading-bar");
+			loadingBar.style.visibility = "visible";
+			console.log(loadingBar);
+			document.getElementById('wiki_iframe').src = "";
+
 	    	var results = response.results;
 	    	var wikiQuery = getWikiQueryFromGeocodingResults(results);
 	    	searchWikipedia(wikiQuery)
@@ -28,6 +33,9 @@ function initMap() {
 		        	if (currentUrl != newUrl) {
 		        		document.getElementById('wiki_iframe').src = newUrl;
 		        	}
+
+		        	var loadingBar = document.getElementById("loading-bar");
+					loadingBar.style.visibility = "hidden";
 		        }
 		    })
 	    });
