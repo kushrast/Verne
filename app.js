@@ -12,35 +12,118 @@ function initMap() {
     var lat = map.center.lat();
     var lng = map.center.lng();
 
-    var data = getAddressFromLatLng(lat, lng);
+    switchToNewLocation(lat, lng);
+  });
+}
+
+function switchToNewLocation(lat, lng) {
+	var data = reverseGeocodeLatLng(lat, lng);
     
     if (data != null) {
 	    data.then(response => {
-	    	var loadingBar = document.getElementById("loading-bar");
-			loadingBar.style.visibility = "visible";
-			console.log(loadingBar);
-			document.getElementById('wiki_iframe').src = "";
+	    	showLoadingBar();
+	    	setWikiUrl("");
 
 	    	var results = response.results;
-	    	var wikiQuery = getWikiQueryFromGeocodingResults(results);
-	    	searchWikipedia(wikiQuery)
-		    .then(function(response) {
-		        var matchedPages = response.query.search;
-		        if (matchedPages.length > 1) {
-		        	var currentUrl = document.getElementById('wiki_iframe').src;
-		        	var newUrl = "https://en.wikipedia.org/wiki/" + matchedPages[0].title.replace(/ /g,"_");
+	    	var geoKeywordsByLocationType = parseGeocodingResults(results);
+	    	console.log(geoKeywordsByLocationType);
+	    	var geoKeywordsList = getGeoKeywordsList(geoKeywordsByLocationType);
+	    	var mainKeyword = pickMainKeywordfromGeocodingResults(geoKeywordsByLocationType);
+	    	console.log(mainKeyword);
 
-		        	if (currentUrl != newUrl) {
-		        		document.getElementById('wiki_iframe').src = newUrl;
-		        	}
+	    	if (mainKeyword != null) {
+		    	searchWikipedia(mainKeyword)
+			    .then(function(response) {
+			        var matchedPages = response.query.search;
+			        if (matchedPages.length > 1) {
+			        	var currentUrl = getWikiUrl();
+			        	var newUrl = "https://en.wikipedia.org/wiki/" + matchedPages[0].title.replace(/ /g,"_");
 
-		        	var loadingBar = document.getElementById("loading-bar");
-					loadingBar.style.visibility = "hidden";
-		        }
-		    })
+			        	if (currentUrl != newUrl) {
+			        		setWikiUrl(newUrl);
+			        	}
+
+			        	hideLoadingBar();
+
+			        	addRecommendedSearches(geoKeywordsList);
+			        }
+			    });
+	    	}
 	    });
     }
-  });
+}
+
+function addRecommendedSearches(geoKeywordsList) {
+	console.log(geoKeywordsList);
+	var recommendationsDiv = document.getElementById("recommendations-list");
+
+	recommendationsDiv.innerHTML = "";
+
+	for (i in geoKeywordsList) {
+		var keyword = geoKeywordsList[i];
+		console.log(keyword);
+		var node = document.createElement("div");
+		node.classList.add("recommendation");
+		node.innerHTML = keyword;
+
+		recommendationsDiv.appendChild(node);
+	}
+}
+
+function getGeoKeywordsList(geoKeywordsByLocationType) {
+	var keywordsMap = {};
+	for (locationType in geoKeywordsByLocationType) {
+		for (keyword in geoKeywordsByLocationType[locationType]) {
+			keywordsMap[keyword] = 1;
+		}
+	}
+
+	return Object.keys(keywordsMap);
+}
+
+function pickMainKeywordfromGeocodingResults(geoKeywords) {
+	var administrative_area_level_1;
+	if ("administrative_area_level_1" in geoKeywords) {
+		administrative_area_level_1 = Object.keys(geoKeywords["administrative_area_level_1"])[0];
+	}
+
+	if ("locality" in geoKeywords) {
+		return Object.keys(geoKeywords["locality"])[0] + " " + administrative_area_level_1;
+	}
+	if ("colloquial_area" in geoKeywords) {
+		return Object.keys(geoKeywords["colloquial_area"])[0] + " " + administrative_area_level_1;
+	}
+	if ("administrative_area_level_1" in geoKeywords) {
+		return Object.keys(geoKeywords["administrative_area_level_1"])[0];
+	}
+	if ("administrative_area_level_2" in geoKeywords) {
+		return Object.keys(geoKeywords["administrative_area_level_2"])[0];
+	}
+	if ("country" in geoKeywords) {
+		return Object.keys(geoKeywords["country"])[0];
+	}
+	if ("political" in geoKeywords) {
+		return Object.keys(geoKeywords["political"])[0];
+	}
+	return null;
+}
+
+function getWikiUrl() {
+	return document.getElementById('wiki_iframe').src;
+}
+
+function setWikiUrl(url) {
+	document.getElementById('wiki_iframe').src = url;
+}
+
+function showLoadingBar() {
+	var loadingBar = document.getElementById("loading-bar");
+	loadingBar.style.visibility = "visible";
+}
+
+function hideLoadingBar() {
+	var loadingBar = document.getElementById("loading-bar");
+	loadingBar.style.visibility = "hidden";
 }
 
 function searchWikipedia(searchQuery) {
@@ -60,28 +143,42 @@ function searchWikipedia(searchQuery) {
 	    .then(function(response){return response.json();});
 }
 
-function getWikiQueryFromGeocodingResults(results) {
-	var search_result = "";
-	if (results.length > 1) {
-		for (result of results) {
-    		for (addrComponent of result.address_components) {
-    			if (search_result == "") {
-    					search_result = addrComponent.long_name;
-    			}
+function parseGeocodingResults(results) {
+	var locationsAndTypes = {}
+	console.log("---");
+	for (result of results) {
+		for (addrComponent of result.address_components) {
+			var addrName = addrComponent.long_name;
 
-    			for (locationType of addrComponent.types) {
-    				console.log(addrComponent.long_name + " " + locationType);
+			for (locationType of addrComponent.types) {
 
-    				if (locationType == "administrative_area_level_1") {
-    					return addrComponent.long_name;
-    				}
-    			}
-    		}
+				if (isAcceptableLocationType(locationType)) {
+					if (!locationsAndTypes.hasOwnProperty(locationType)) {
+						locationsAndTypes[locationType] = {}
+					}
+					locationsAndTypes[locationType][addrName] = 1;
+				}
+			}
 		}
 	}
-    return search_result;
+    return locationsAndTypes;
 }
-function getAddressFromLatLng(lat, lng) {
+
+function isAcceptableLocationType(locationType) {
+	switch(locationType) {
+		case "colloquial_area":
+		case "administrative_area_level_1":
+		case "administrative_area_level_2":
+		case "country":
+		case "political":
+		case "locality":
+			return true;
+		default:
+			return false;
+	}
+}
+
+function reverseGeocodeLatLng(lat, lng) {
     var geocodingLink = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyBm-lj_8Dm-mGESYObrzWGcVd1Siue4iYk`;
 
     return fetch(geocodingLink)

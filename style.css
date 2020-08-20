@@ -25,6 +25,39 @@
   	justify-content: center;
 }
 
+#recommendations-list {
+	align-self: flex-end;
+	padding-bottom: 20px;
+	display: flex;
+}
+
+.recommendation {
+	background-color: #3D9970;
+	color: white;
+	font-family: Roboto;
+	font-size: 14px;
+	min-width: 50px;
+	text-align: center;
+	padding: 5px 8px 5px 8px;
+	border-radius: 8px;
+	box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.2);
+	margin: 0px 5px 0px 5px;
+	transition-duration: 0.2s;
+	cursor: pointer;
+}
+
+.recommendation:hover {
+	cursor: pointer;
+	transition-duration: 0.2s;
+	background-color: #368763;
+}
+
+.recommendation:active {
+	cursor: pointer;
+	transition-duration: 0.2s;
+	background-color: #2b6b4e;
+}
+
 /* Optional: Makes the sample page fill the window. */
 html,
 body {
