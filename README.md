@@ -5,3 +5,7 @@ Verne is a web application that uses Google Maps to help you explore different p
 Try it out at [kushrastogi.com/verne](http://kushrastogi.com/verne).
 
 Built using HTML/CSS/JS, Google Maps JS API, Google Geocoding API.
+
+
+Related:
+[https://wiki-map.com/](https://wiki-map.com/)
